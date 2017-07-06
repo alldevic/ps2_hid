@@ -172,7 +172,7 @@ void keyboard_loop()
 void setup() {
   setup_keymaps();
   setup_ps2();
-  delay(500);
+  delay(1000);
  
 }
 
