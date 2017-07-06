@@ -4,7 +4,7 @@
 
 #define DATA_PIN 2
 #define IRQ_PIN 3
-#define BUFFER_SIZE 45
+#define BUFFER_SIZE 25
 
 static volatile uint8_t buffer[BUFFER_SIZE];
 static volatile uint8_t head, tail, sendBits, msg, bitCount, setBits;
@@ -92,9 +92,7 @@ void setup_ps2(){
 void setup() {
   setup_keymaps();
   setup_ps2();
-  
-  Keyboard.begin();
-  delay(1000);
+  delay(500);
 }
 
 bool ext, brk;
