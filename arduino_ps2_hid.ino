@@ -13,7 +13,7 @@ KeyReport report;
 uint8_t K[255], KE[255], leds;
 bool send_leds;
 
-void setup_keymaps(){
+void setup_keymaps() {
   K[0x1C] = 4, K[0x32] = 5, K[0x21] = 6, K[0x23] = 7, K[0x24] = 8;
   K[0x2B] = 9, K[0x34] = 10, K[0x33] = 11, K[0x43] = 12, K[0x3B] = 13;
   K[0x42] = 14, K[0x4B] = 15, K[0x3A] = 16, K[0x31] = 17, K[0x44] = 18;
@@ -32,20 +32,20 @@ void setup_keymaps(){
   K[0x74] = 94, K[0x6C] = 95, K[0x75] = 96, K[0x7D] = 97, K[0x5B] = 48;
   K[0x4C] = 51, K[0x52] = 52, K[0x41] = 54, K[0x49] = 55, K[0x4A] = 56;
   K[0x61] = 100;
-  
-  KE[0x1F] = 227, KE[0x14] = 228, KE[0x27] = 231, KE[0x11] = 230; 
+
+  KE[0x1F] = 227, KE[0x14] = 228, KE[0x27] = 231, KE[0x11] = 230;
   KE[0x2F] = 101, KE[0x7c] = 70, KE[0x70] = 73, KE[0x6C] = 74;
   KE[0x7D] = 75, KE[0x71] = 76, KE[0x69] = 77, KE[0x7A] = 78, KE[0x5A] = 88;
   KE[0x75] = 82, KE[0x6B] = 80, KE[0x72] = 81, KE[0x74] = 79, KE[0x4A] = 84;
 }
 
 void ps2interrupt(void) {
-  static uint8_t bitcount=0, incoming=0;
-  static uint32_t prev_ms=0;
+  static uint8_t bitcount = 0, incoming = 0;
+  static uint32_t prev_ms = 0;
   uint32_t now_ms;
   uint8_t n, val;
-  
-  if (!sendBits){
+
+  if (!sendBits) {
     val = digitalRead(DATA_PIN), now_ms = millis();
     if (now_ms - prev_ms > 250) bitcount = 0, incoming = 0;
     prev_ms = now_ms, n = bitcount - 1;
@@ -67,7 +67,7 @@ void ps2interrupt(void) {
       digitalWrite(DATA_PIN,  bt);
       setBits += bt;
     }
-    ++bitCount; 
+    ++bitCount;
   }
 }
 
@@ -78,17 +78,11 @@ static inline uint8_t get_scan_code(void) {
   return buffer[tail];
 }
 
-void setup_ps2(){
+void setup_ps2() {
   attachInterrupt(0, ps2interrupt, FALLING);
   pinMode(IRQ_PIN, INPUT_PULLUP);
   pinMode(DATA_PIN, INPUT_PULLUP);
   head = 0, tail = 0, sendBits = 0;
-}
-
-void setup() {
-  setup_keymaps();
-  setup_ps2();
-  delay(500);
 }
 
 bool ext, brk;
@@ -98,8 +92,8 @@ void report_add(uint8_t k) {
   uint8_t i;
   if (k >= 224) report.modifiers |= 1 << (k - 224);
   else if (report.keys[0] != k && report.keys[1] != k &&
-             report.keys[2] != k && report.keys[3] != k &&
-             report.keys[4] != k && report.keys[5] != k) {
+           report.keys[2] != k && report.keys[3] != k &&
+           report.keys[4] != k && report.keys[5] != k) {
     for (i = 0; i < 6; ++i) {
       if (report.keys[i] == 0) {
         report.keys[i] = k;
@@ -124,7 +118,7 @@ void report_remove(uint8_t k) {
 
 void send_msg(uint8_t m) {
   noInterrupts();
-  pinMode(IRQ_PIN, OUTPUT);      
+  pinMode(IRQ_PIN, OUTPUT);
   digitalWrite(IRQ_PIN, LOW);
   delayMicroseconds(60);
   pinMode(IRQ_PIN, INPUT_PULLUP);
@@ -137,40 +131,52 @@ void send_msg(uint8_t m) {
   interrupts();
 }
 
-void loop() {
+void keyboard_loop()
+{
   uint8_t k = get_scan_code(), k2;
   if (k) {
-    if (skip) --skip; 
+    if (skip) --skip;
     else {
       if (k == 0xE0) ext = true;
-      else if (k == 0xF0) brk = true; 
-      else if (k == 0xFA) { 
-        if (send_leds) send_leds = false, send_msg(leds); 
+      else if (k == 0xF0) brk = true;
+      else if (k == 0xFA) {
+        if (send_leds) send_leds = false, send_msg(leds);
       } else {
         if (k == 0xE1) {
           k2 = 72, skip = 7, brk = true;
           report_add(k2);
           Keyboard.sendReport(&report);
-        } else k2 = ext ? KE[k] : K[k]; 
-               
-        if (k2){
-          if (brk){
+        } else k2 = ext ? KE[k] : K[k];
+
+        if (k2) {
+          if (brk) {
             report_remove(k2);
-            if (k2 == 83 || k2 == 71 || k2 == 57){
+            if (k2 == 83 || k2 == 71 || k2 == 57) {
               send_leds = true;
-              if (k2 == 83) leds ^= 2; 
-              else if (k2 == 71) leds ^= 1; 
-              else if (k2 == 57) leds ^= 4; 
+              if (k2 == 83) leds ^= 2;
+              else if (k2 == 71) leds ^= 1;
+              else if (k2 == 57) leds ^= 4;
               send_msg(0xED);
             }
           } else report_add(k2);
-          
+
           Keyboard.sendReport(&report);
         }
-        
+
         brk = false, ext = false;
       }
     }
   }
+}
+
+void setup() {
+  setup_keymaps();
+  setup_ps2();
+  delay(500);
+ 
+}
+
+void loop() {
+  keyboard_loop();
 }
 
