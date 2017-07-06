@@ -60,11 +60,9 @@ void ps2interrupt(void) {
   } else {
     --sendBits;
     uint8_t b = bitCount - 1;
-    if (b == 8){
-      digitalWrite(DATA_PIN, !(setBits & 1));
-    } else if (b == 9) {
-      pinMode(DATA_PIN, INPUT_PULLUP);
-    } else if (b < 8) {
+    if (b == 8) digitalWrite(DATA_PIN, !(setBits & 1));
+    else if (b == 9) pinMode(DATA_PIN, INPUT_PULLUP);
+    else if (b < 8) {
       bool bt = (msg >> b) & 1;
       digitalWrite(DATA_PIN,  bt);
       setBits += bt;
@@ -74,12 +72,10 @@ void ps2interrupt(void) {
 }
 
 static inline uint8_t get_scan_code(void) {
-  uint8_t i = tail + 1;
-
   if (tail == head) return 0;
-  if (i >= BUFFER_SIZE) i = 0;
-  tail = i;
-  return buffer[i];
+  tail++;
+  if (tail >= BUFFER_SIZE) tail = 0;
+  return buffer[tail];
 }
 
 void setup_ps2(){
@@ -100,9 +96,8 @@ int skip;
 
 void report_add(uint8_t k) {
   uint8_t i;
-  if (k >= 224) {
-    report.modifiers |= 1 << (k - 224);
-  } else if (report.keys[0] != k && report.keys[1] != k &&
+  if (k >= 224) report.modifiers |= 1 << (k - 224);
+  else if (report.keys[0] != k && report.keys[1] != k &&
              report.keys[2] != k && report.keys[3] != k &&
              report.keys[4] != k && report.keys[5] != k) {
     for (i = 0; i < 6; ++i) {
@@ -116,9 +111,8 @@ void report_add(uint8_t k) {
 
 void report_remove(uint8_t k) {
   uint8_t i;
-  if (k >= 224) {
-    report.modifiers &= ~(1 << (k - 224));
-  } else {
+  if (k >= 224) report.modifiers &= ~(1 << (k - 224));
+  else {
     for (i = 0; i < 6; ++i) {
       if (report.keys[i] == k) {
         report.keys[i] = 0;
@@ -146,44 +140,31 @@ void send_msg(uint8_t m) {
 void loop() {
   uint8_t k = get_scan_code(), k2;
   if (k) {
-    if (skip) {
-      --skip; 
-    } else {
-      if (k == 0xE0) {
-        ext = true;
-      } else if (k == 0xF0) {
-        brk = true; 
-      } else if (k == 0xFA) { 
-        if (send_leds) {
-          send_leds = false;
-          send_msg(leds); 
-        }
+    if (skip) --skip; 
+    else {
+      if (k == 0xE0) ext = true;
+      else if (k == 0xF0) brk = true; 
+      else if (k == 0xFA) { 
+        if (send_leds) send_leds = false, send_msg(leds); 
       } else {
         if (k == 0xE1) {
           k2 = 72, skip = 7, brk = true;
           report_add(k2);
           Keyboard.sendReport(&report);
-        } else {
-          k2 = ext ? KE[k] : K[k]; 
-        }
-        
+        } else k2 = ext ? KE[k] : K[k]; 
+               
         if (k2){
           if (brk){
             report_remove(k2);
             if (k2 == 83 || k2 == 71 || k2 == 57){
               send_leds = true;
-              if (k2 == 83) {
-                leds ^= 2; 
-              } else if (k2 == 71) {
-                leds ^= 1; 
-              } else if (k2 == 57) {
-                leds ^= 4; 
-              }
+              if (k2 == 83) leds ^= 2; 
+              else if (k2 == 71) leds ^= 1; 
+              else if (k2 == 57) leds ^= 4; 
               send_msg(0xED);
             }
-          } else {
-            report_add(k2);
-          }
+          } else report_add(k2);
+          
           Keyboard.sendReport(&report);
         }
         
