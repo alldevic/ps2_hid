@@ -10,7 +10,7 @@ static volatile uint8_t buffer[BUFFER_SIZE];
 static volatile uint8_t head, tail, sendBits, msg, bitCount, setBits;
 
 KeyReport report;
-uint8_t K[255], KE[255], leds;
+uint8_t K[255], leds;
 bool send_leds;
 
 void setup_keymaps() {
@@ -32,13 +32,31 @@ void setup_keymaps() {
   K[0x74] = 94, K[0x6C] = 95, K[0x75] = 96, K[0x7D] = 97, K[0x5B] = 48;
   K[0x4C] = 51, K[0x52] = 52, K[0x41] = 54, K[0x49] = 55, K[0x4A] = 56;
   K[0x61] = 100;
-
-  KE[0x1F] = 227, KE[0x14] = 228, KE[0x27] = 231, KE[0x11] = 230;
-  KE[0x2F] = 101, KE[0x7c] = 70, KE[0x70] = 73, KE[0x6C] = 74;
-  KE[0x7D] = 75, KE[0x71] = 76, KE[0x69] = 77, KE[0x7A] = 78, KE[0x5A] = 88;
-  KE[0x75] = 82, KE[0x6B] = 80, KE[0x72] = 81, KE[0x74] = 79, KE[0x4A] = 84;
 }
 
+uint8_t return_ke(uint8_t i){
+  switch(i){
+    case 17: return 230;
+    case 20: return 228;
+    case 31: return 227;
+    case 39: return 231;
+    case 47: return 101;
+    case 74: return 84;
+    case 90: return 88;
+    case 105: return 77;
+    case 107: return 80;
+    case 108: return 74;
+    case 112: return 73;
+    case 113: return 76;
+    case 114: return 81;
+    case 116: return 79;
+    case 117: return 82;
+    case 122: return 78;
+    case 124: return 70;
+    case 125: return 75;
+    default: return 0;
+  }
+}
 void ps2interrupt(void) {
   static uint8_t bitcount = 0, incoming = 0;
   static uint32_t prev_ms = 0;
@@ -146,7 +164,7 @@ void keyboard_loop()
           k2 = 72, skip = 7, brk = true;
           report_add(k2);
           Keyboard.sendReport(&report);
-        } else k2 = ext ? KE[k] : K[k];
+        } else k2 = ext ? return_ke(k) : K[k];
 
         if (k2) {
           if (brk) {
