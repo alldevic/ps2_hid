@@ -4,7 +4,7 @@
 
 #define DATA_PIN 2
 #define IRQ_PIN 3
-#define BUFFER_SIZE 25
+#define BUFFER_SIZE 45
 
 static volatile uint8_t buffer[BUFFER_SIZE];
 static volatile uint8_t head, tail, sendBits, msg, bitCount, setBits;
