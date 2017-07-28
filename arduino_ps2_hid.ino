@@ -149,6 +149,16 @@ void send_msg(uint8_t m) {
   interrupts();
 }
 
+void BT_send_report(KeyReport *report){ 
+  Serial1.write((byte)0xFD); //Start HID Report 
+  Serial1.write((byte)0x9); //Length byte 
+  Serial1.write((byte)0x1); //Descriptor byte 
+  Serial1.write(report->modifiers); //Modifier byte 
+  Serial1.write((byte)0x00); //- 
+    for(byte i = 0;i<6;i++) 
+    Serial1.write((byte)(report->keys[i])); 
+} 
+
 void keyboard_loop()
 {
   uint8_t k = get_scan_code(), k2;
@@ -164,6 +174,7 @@ void keyboard_loop()
           k2 = 72, skip = 7, brk = true;
           report_add(k2);
           Keyboard.sendReport(&report);
+          BT_send_report(&report);
         } else k2 = ext ? return_ke(k) : K[k];
 
         if (k2) {
@@ -179,6 +190,7 @@ void keyboard_loop()
           } else report_add(k2);
 
           Keyboard.sendReport(&report);
+          BT_send_report(&report);
         }
 
         brk = false, ext = false;
@@ -188,9 +200,10 @@ void keyboard_loop()
 }
 
 void setup() {
+  Serial1.begin(115200);
   setup_keymaps();
   setup_ps2();
-  delay(1000);
+  delay(200);
  
 }
 
