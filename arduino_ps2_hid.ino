@@ -57,6 +57,7 @@ uint8_t return_ke(uint8_t i){
     default: return 0;
   }
 }
+
 void ps2interrupt(void) {
   static uint8_t bitcount = 0, incoming = 0;
   static uint32_t prev_ms = 0;
@@ -112,12 +113,11 @@ void report_add(uint8_t k) {
   else if (report.keys[0] != k && report.keys[1] != k &&
            report.keys[2] != k && report.keys[3] != k &&
            report.keys[4] != k && report.keys[5] != k) {
-    for (i = 0; i < 6; ++i) {
+    for (i = 0; i < 6; ++i)
       if (report.keys[i] == 0) {
         report.keys[i] = k;
         break;
       }
-    }
   }
 }
 
@@ -159,56 +159,15 @@ void BT_send_report(KeyReport *report){
     Serial1.write((byte)(report->keys[i])); 
 } 
 
-void mmkeyboard(KeyReport *report){
-  if (report->modifiers == 0xE0){
-    report_remove(0xE0);
-    if (report->keys[0] == 0x4F){ //Right arrow
-      report_remove(0x4F);
-      report_add(0x100);
-      //report->modifiers = 0x100;  //Next track
-      //report->keys[0] = 0x00;
-    }
-    if (report->keys[0] == 0x50){ //Left arrow
-      report_remove(0x50);
-      report_add(0x200);
-      //report->modifiers = 0x200;  //Prev track
-      //report->keys[0] = 0x00;
-    }
-    if (report->keys[0] == 0x43){ //F10
-      report_remove(0x43);
-      report_add(0x40);
-      //report->modifiers = 0x10;  //Mute
-      //report->keys[0] = 0x00;
-    }
-    if (report->keys[0] == 0x45){ //F12
-      report_remove(0x45);
-      report_add(0x10);
-      //report->modifiers = 0x10;   //Volume up
-      //report->keys[0] = 0x00;
-    }
-    if (report->keys[0] == 0x44){ //F11
-      report_remove(0x44);
-      report_add(0x20);
-      //report->modifiers = 0x20;   //Volume down
-      //report->keys[0] = 0x00;
-    }
-    if (report->keys[0] == 0x52){ //Up arrow
-      report_remove(0x52);
-      report_add(0x400);
-      //report->modifiers = 0x400;  //Stop
-      //report->keys[0] = 0x00;
-    }
-    if (report->keys[0] == 0x51){ //Down arrow
-      report_remove(0x51);
-      report_add(0x80);
-      //report->modifiers = 0x80;   //Play/pause
-      //report->keys[0] = 0x00;
-    }
-  }
+void setup() {
+  Serial1.begin(115200);
+  setup_keymaps();
+  setup_ps2();
+  delay(200);
 }
-void keyboard_loop()
-{
-  uint8_t k = get_scan_code(), k2;
+
+void loop() {
+    uint8_t k = get_scan_code(), k2;
   if (k) {
     if (skip) --skip;
     else {
@@ -220,7 +179,6 @@ void keyboard_loop()
         if (k == 0xE1) {
           k2 = 72, skip = 7, brk = true;
           report_add(k2);
-          mmkeyboard(&report);
           Keyboard.sendReport(&report);
           BT_send_report(&report);
         } else k2 = ext ? return_ke(k) : K[k];
@@ -236,8 +194,6 @@ void keyboard_loop()
               send_msg(0xED);
             }
           } else report_add(k2);
-
-          mmkeyboard(&report);
           Keyboard.sendReport(&report);
           BT_send_report(&report);
         }
@@ -246,17 +202,5 @@ void keyboard_loop()
       }
     }
   }
-}
-
-void setup() {
-  Serial1.begin(115200);
-  setup_keymaps();
-  setup_ps2();
-  delay(200);
- 
-}
-
-void loop() {
-  keyboard_loop();
 }
 
