@@ -159,6 +159,53 @@ void BT_send_report(KeyReport *report){
     Serial1.write((byte)(report->keys[i])); 
 } 
 
+void mmkeyboard(KeyReport *report){
+  if (report->modifiers == 0xE0){
+    report_remove(0xE0);
+    if (report->keys[0] == 0x4F){ //Right arrow
+      report_remove(0x4F);
+      report_add(0x100);
+      //report->modifiers = 0x100;  //Next track
+      //report->keys[0] = 0x00;
+    }
+    if (report->keys[0] == 0x50){ //Left arrow
+      report_remove(0x50);
+      report_add(0x200);
+      //report->modifiers = 0x200;  //Prev track
+      //report->keys[0] = 0x00;
+    }
+    if (report->keys[0] == 0x43){ //F10
+      report_remove(0x43);
+      report_add(0x40);
+      //report->modifiers = 0x10;  //Mute
+      //report->keys[0] = 0x00;
+    }
+    if (report->keys[0] == 0x45){ //F12
+      report_remove(0x45);
+      report_add(0x10);
+      //report->modifiers = 0x10;   //Volume up
+      //report->keys[0] = 0x00;
+    }
+    if (report->keys[0] == 0x44){ //F11
+      report_remove(0x44);
+      report_add(0x20);
+      //report->modifiers = 0x20;   //Volume down
+      //report->keys[0] = 0x00;
+    }
+    if (report->keys[0] == 0x52){ //Up arrow
+      report_remove(0x52);
+      report_add(0x400);
+      //report->modifiers = 0x400;  //Stop
+      //report->keys[0] = 0x00;
+    }
+    if (report->keys[0] == 0x51){ //Down arrow
+      report_remove(0x51);
+      report_add(0x80);
+      //report->modifiers = 0x80;   //Play/pause
+      //report->keys[0] = 0x00;
+    }
+  }
+}
 void keyboard_loop()
 {
   uint8_t k = get_scan_code(), k2;
@@ -173,6 +220,7 @@ void keyboard_loop()
         if (k == 0xE1) {
           k2 = 72, skip = 7, brk = true;
           report_add(k2);
+          mmkeyboard(&report);
           Keyboard.sendReport(&report);
           BT_send_report(&report);
         } else k2 = ext ? return_ke(k) : K[k];
@@ -189,6 +237,7 @@ void keyboard_loop()
             }
           } else report_add(k2);
 
+          mmkeyboard(&report);
           Keyboard.sendReport(&report);
           BT_send_report(&report);
         }
