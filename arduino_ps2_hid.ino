@@ -156,31 +156,25 @@ void BT_init(){
   delay(15);
 }
 
-void BT_send_report(KeyReport *report){ 
-  Serial1.write((byte)0xFD); //Start HID Report 
-  Serial1.write((byte)0x9); //Length byte 
-  Serial1.write((byte)0x1); //Descriptor byte 
-  Serial1.write(report->modifiers); //Modifier byte 
-  Serial1.write((byte)0x00); //- 
-  for(byte i = 0;i<6;i++) 
-    Serial1.write((byte)(report->keys[i])); 
+void BT_SendReport(uint8_t id, KeyReport *report){
+  if (id == 2){
+    Serial1.write((byte)0xFD); //Start HID Report 
+    Serial1.write((byte)0x9); //Length byte 
+    Serial1.write((byte)0x1); //Descriptor byte 
+    Serial1.write(report->modifiers); //Modifier byte 
+    Serial1.write((byte)0x00); //- 
+    for(byte i = 0;i<6;i++) 
+      Serial1.write((byte)(report->keys[i])); 
+    return;
+  }
+  if (id == 3){
+    Serial1.write((byte)0xFD); //Start HID Report 
+    Serial1.write((byte)0x3); //Length byte 
+    Serial1.write((byte)0x3); //Descriptor byte 
+    Serial1.write((byte)&report->modifiers); 
+    Serial1.write((byte)0x0);
+  }
 } 
-
-void BT_send_mute(){ 
-  Serial1.write((byte)0xFD); //Start HID Report 
-  Serial1.write((byte)0x3); //Length byte 
-  Serial1.write((byte)0x3); //Descriptor byte 
-  Serial1.write((byte)0x40); 
-  Serial1.write((byte)0x0);
-}
-
-void BT_send_unmute(){ 
-  Serial1.write((byte)0xFD); //Start HID Report 
-  Serial1.write((byte)0x3); //Length byte 
-  Serial1.write((byte)0x3); //Descriptor byte 
-  Serial1.write((byte)0x0); 
-  Serial1.write((byte)0x0);
-}
 
 void setup() {
   BT_init();
@@ -203,7 +197,7 @@ void loop() {
           k2 = 72, skip = 7, brk = true;
           report_add(k2);
           if (is_usb) HID().SendReport(2,&report,sizeof(KeyReport));
-            else BT_send_report(&report);
+            else BT_SendReport(2, &report);
         } else k2 = ext ? return_ke(k) : K[k];
 
         if (k2) {
@@ -218,7 +212,7 @@ void loop() {
             }
           } else report_add(k2);
           if (is_usb) HID().SendReport(2,&report,sizeof(KeyReport));
-            else BT_send_report(&report);
+            else BT_SendReport(2,&report);
         }
 
         brk = false, ext = false;
