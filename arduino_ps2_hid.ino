@@ -1,10 +1,8 @@
-//Complete Program for an Arduino to act as an PS2 to USB converter
-
 #include "Keyboard.h"
 
 #define DATA_PIN 2
 #define IRQ_PIN 3
-#define BUFFER_SIZE 45
+#define BUFFER_SIZE 16
 
 static volatile uint8_t buffer[BUFFER_SIZE];
 static volatile uint8_t head, tail, sendBits, msg, bitCount, setBits;
@@ -104,7 +102,7 @@ void setup_ps2() {
   head = 0, tail = 0, sendBits = 0;
 }
 
-bool ext, brk;
+bool ext, brk, is_usb = true;
 int skip;
 
 void report_add(uint8_t k) {
@@ -149,21 +147,46 @@ void send_msg(uint8_t m) {
   interrupts();
 }
 
+void BT_init(){
+  Serial1.begin(115200);
+  delay(320);                     // IMPORTANT DELAY! (Minimum ~276ms)
+  Serial1.print("$$$");         // Enter command mode
+  delay(15);
+  Serial1.print("CFI\n");                 
+  delay(15);
+}
+
 void BT_send_report(KeyReport *report){ 
   Serial1.write((byte)0xFD); //Start HID Report 
   Serial1.write((byte)0x9); //Length byte 
   Serial1.write((byte)0x1); //Descriptor byte 
   Serial1.write(report->modifiers); //Modifier byte 
   Serial1.write((byte)0x00); //- 
-    for(byte i = 0;i<6;i++) 
+  for(byte i = 0;i<6;i++) 
     Serial1.write((byte)(report->keys[i])); 
 } 
 
+void BT_send_mute(){ 
+  Serial1.write((byte)0xFD); //Start HID Report 
+  Serial1.write((byte)0x3); //Length byte 
+  Serial1.write((byte)0x3); //Descriptor byte 
+  Serial1.write((byte)0x40); 
+  Serial1.write((byte)0x0);
+}
+
+void BT_send_unmute(){ 
+  Serial1.write((byte)0xFD); //Start HID Report 
+  Serial1.write((byte)0x3); //Length byte 
+  Serial1.write((byte)0x3); //Descriptor byte 
+  Serial1.write((byte)0x0); 
+  Serial1.write((byte)0x0);
+}
+
 void setup() {
-  Serial1.begin(115200);
+  BT_init();
   setup_keymaps();
   setup_ps2();
-  delay(200);
+  delay(100);
 }
 
 void loop() {
@@ -179,8 +202,8 @@ void loop() {
         if (k == 0xE1) {
           k2 = 72, skip = 7, brk = true;
           report_add(k2);
-          Keyboard.sendReport(&report);
-          BT_send_report(&report);
+          if (is_usb) HID().SendReport(2,&report,sizeof(KeyReport));
+            else BT_send_report(&report);
         } else k2 = ext ? return_ke(k) : K[k];
 
         if (k2) {
@@ -194,8 +217,8 @@ void loop() {
               send_msg(0xED);
             }
           } else report_add(k2);
-          Keyboard.sendReport(&report);
-          BT_send_report(&report);
+          if (is_usb) HID().SendReport(2,&report,sizeof(KeyReport));
+            else BT_send_report(&report);
         }
 
         brk = false, ext = false;
