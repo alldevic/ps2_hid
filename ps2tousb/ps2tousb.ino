@@ -4,23 +4,23 @@
 #include "HID-Project.h"
 
 // RN-42 consumer codes
-#define BT_RELEASE 0x0        // Release consumer key
-#define BT_HOME 0x1           // AC Home
-#define BT_EMAIL 0x2          // AC Email Reader
-#define BT_SEARCH 0x4         // AC Search
-#define BT_KEYBLAY 0x8        // AL Keyboard Layout (Virtual Apple Keyboard Toggle)
-#define BT_VOL_UP 0x10        // Volume Up
-#define BT_VOL_DOWN 0x20      // Volume Down
-#define BT_MUTE 0x40          // Mute
-#define BT_PLAY 0x80          // Play/Pause
-#define BT_NEXT 0x100         // Scan Next Track
-#define BT_PREV 0x200         // Scan Previous Track
-#define BT_STOP 0x400         // Stop
-#define BT_EJECT 0x800        // Eject
-#define BT_FORWARD 0x1000     // Fast Forward
-#define BT_REWIND 0x2000      // Rewind
-#define BT_STOP_EJECT 0x4000  // Stop/Eject
-#define BT_BROWSER 0x8000     // AL Internet Browse
+#define BT_RELEASE 0x0, 0x0        // Release consumer key
+#define BT_HOME 0x1, 0x00          // AC Home
+#define BT_EMAIL 0x2, 0x00         // AC Email Reader
+#define BT_SEARCH 0x4, 0x00        // AC Search
+#define BT_KEYBLAY 0x8, 0x00       // AL Keyboard Layout (Virtual Apple Keyboard Toggle)
+#define BT_VOL_UP 0x10, 0x00       // Volume Up
+#define BT_VOL_DOWN 0x20, 0x00     // Volume Down
+#define BT_MUTE 0x40, 0x00         // Mute
+#define BT_PLAY 0x80, 0x00         // Play/Pause
+#define BT_NEXT 0x00, 0x01         // Scan Next Track
+#define BT_PREV 0x00, 0x02         // Scan Previous Track
+#define BT_STOP 0x00, 0x04         // Stop
+#define BT_EJECT 0x00, 0x08        // Eject
+#define BT_FORWARD 0x00, 0x10      // Fast Forward
+#define BT_REWIND 0x00, 0x20       // Rewind
+#define BT_STOP_EJECT 0x00, 0x40   // Stop/Eject
+#define BT_BROWSER 0x00, 0x80      // AL Internet Browse
 
 static bool is_usb = true;
 static ps2::NullDiagnostics diagnostics;
@@ -34,10 +34,10 @@ void BT_init(){
   delay(100);
   Serial1.begin(115200);
   delay(320);                     // IMPORTANT DELAY! (Minimum ~276ms)
-  Serial1.print("$$$");         // Enter command mode
-  delay(15);
-  Serial1.print("CFR\n");                 
-  delay(100);
+  //Serial1.print("$$$");         // Enter command mode
+  //delay(15);
+  //Serial1.print("CFR\n");                 
+  //delay(100);
 }
 
 void BT_close(){
@@ -45,15 +45,18 @@ void BT_close(){
   if (Serial1.available()) Serial1.end();
 }
 
-void BT_WriteConsumer(byte consumer){
+void BT_WriteConsumer(byte low, byte high){
   Serial1.write((byte)0xFD); //Start HID Report 
   Serial1.write((byte)0x3); //Length byte 
   Serial1.write((byte)0x3); //Descriptor byte 
-  Serial1.write(consumer); 
-  Serial1.write((byte)0x0);
+  Serial1.write(low); 
+  Serial1.write(high);
   delay(15);
-  if (consumer != BT_RELEASE)
-    BT_WriteConsumer(BT_RELEASE);
+  Serial1.write((byte)0xFD); //Start HID Report 
+  Serial1.write((byte)0x3); //Length byte 
+  Serial1.write((byte)0x3); //Descriptor byte 
+  Serial1.write((byte)0x00); 
+  Serial1.write((byte)0x00);
   return;
 }
 
@@ -101,9 +104,9 @@ void loop() {
                 if (hidCode == KEY_RIGHT) 
                   is_usb ? Consumer.write(MEDIA_NEXT) : BT_WriteConsumer(BT_NEXT);
                 if (hidCode == KEY_LEFT) 
-                  is_usb ? Consumer.write(MEDIA_PREV) : BT_WriteConsumer(BT_PREV);  
+                  is_usb ? Consumer.write(MEDIA_PREV) : BT_WriteConsumer(BT_PREV);
                 if (hidCode == KEY_UP) {
-                  is_usb ? Consumer.write(MEDIA_STOP) : BT_WriteConsumer(BT_STOP);;
+                  is_usb ? Consumer.write(MEDIA_STOP) : BT_WriteConsumer(BT_STOP); //BT Android problem
                   fn = false;
                 } 
                 if (hidCode == KEY_F10) {
