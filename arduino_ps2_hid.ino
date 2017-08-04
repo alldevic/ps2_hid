@@ -4,6 +4,26 @@
 #define IRQ_PIN 3
 #define BUFFER_SIZE 16
 
+// RN-42 consumer codes
+#define BT_RELEASE 0x0        // Release consumer key
+#define BT_HOME 0x1           // AC Home
+#define BT_EMAIL 0x2          // AC Email Reader
+#define BT_SEARCH 0x4         // AC Search
+#define BT_KEYBLAY 0x8        // AL Keyboard Layout (Virtual Apple Keyboard Toggle)
+#define BT_VOL_UP 0x10        // Volume Up
+#define BT_VOL_DOWN 0x20      // Volume Down
+#define BT_MUTE 0x40          // Mute
+#define BT_PLAY 0x80          // Play/Pause
+#define BT_NEXT 0x100         // Scan Next Track
+#define BT_PREV 0x200         // Scan Previous Track
+#define BT_STOP 0x400         // Stop
+#define BT_EJECT 0x800        // Eject
+#define BT_FORWARD 0x1000     // Fast Forward
+#define BT_REWIND 0x2000      // Rewind
+#define BT_STOP_EJECT 0x4000  // Stop/Eject
+#define BT_BROWSER 0x8000     // AL Internet Browser
+
+static bool is_usb = false;
 static volatile uint8_t buffer[BUFFER_SIZE];
 static volatile uint8_t head, tail, sendBits, msg, bitCount, setBits;
 
@@ -102,7 +122,7 @@ void setup_ps2() {
   head = 0, tail = 0, sendBits = 0;
 }
 
-bool ext, brk, is_usb = false;
+bool ext, brk;
 int skip;
 
 void report_add(uint8_t k) {
@@ -163,21 +183,26 @@ void BT_close(){
   if (Serial1.available()) Serial1.end();
 }
 
+bool BT_remap(KeyReport *report){
+  if (report->modifiers == 0xE5) return true;
+  return false;
+}
+
+void BT_SendConsumer(byte consumer){
+  Serial1.write((byte)0xFD); //Start HID Report 
+  Serial1.write((byte)0x3); //Length byte 
+  Serial1.write((byte)0x3); //Descriptor byte 
+  Serial1.write(consumer); 
+  Serial1.write((byte)0x0);
+}
+
 void BT_SendReport(KeyReport *report){
-  if (consumer_remap(report)){
-    Serial1.write((byte)0xFD); //Start HID Report 
-    Serial1.write((byte)0x3); //Length byte 
-    Serial1.write((byte)0x3); //Descriptor byte 
-    Serial1.write((byte)&report->modifiers); 
-    Serial1.write((byte)0x0);
-  } else {
-    Serial1.write((byte)0xFD); //Start HID Report 
-    Serial1.write((byte)0x9); //Length byte 
-    Serial1.write((byte)0x1); //Descriptor byte 
-    Serial1.write(report->modifiers); //Modifier byte 
-    Serial1.write((byte)0x00); //- 
-    for(byte i = 0; i < 6; i++) Serial1.write((byte)(report->keys[i])); 
-  }
+  Serial1.write((byte)0xFD); //Start HID Report 
+  Serial1.write((byte)0x9); //Length byte 
+  Serial1.write((byte)0x1); //Descriptor byte 
+  Serial1.write(report->modifiers); //Modifier byte 
+  Serial1.write((byte)0x00); //- 
+  for(byte i = 0; i < 6; i++) Serial1.write((byte)(report->keys[i])); 
 } 
 
 void setup() {
@@ -186,11 +211,6 @@ void setup() {
   setup_keymaps();
   setup_ps2();
   delay(100);
-}
-
-bool consumer_remap(KeyReport *report){
-  
-  return false;
 }
 
 void loop() {
