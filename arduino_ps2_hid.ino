@@ -172,10 +172,10 @@ void BT_init(){
   if (Serial1.available()) Serial1.end();
   Serial1.begin(115200);
   delay(320);                     // IMPORTANT DELAY! (Minimum ~276ms)
-  Serial1.print("$$$");         // Enter command mode
-  delay(15);
-  Serial1.print("CFI\n");                 
-  delay(100);
+  //Serial1.print("$$$");         // Enter command mode
+  //delay(15);
+  //Serial1.print("CFI\n");                 
+  //delay(100);
 }
 
 void BT_close(){
@@ -214,7 +214,7 @@ void setup() {
 }
 
 void loop() {
-    uint8_t k = get_scan_code(), k2;
+  uint8_t k = get_scan_code(), k2;
   if (k) {
     if (skip) --skip;
     else {
