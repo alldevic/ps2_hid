@@ -102,7 +102,7 @@ void setup_ps2() {
   head = 0, tail = 0, sendBits = 0;
 }
 
-bool ext, brk, is_usb = true;
+bool ext, brk, is_usb = false;
 int skip;
 
 void report_add(uint8_t k) {
@@ -148,39 +148,49 @@ void send_msg(uint8_t m) {
 }
 
 void BT_init(){
+  digitalWrite(4, HIGH);
+  if (Serial1.available()) Serial1.end();
   Serial1.begin(115200);
   delay(320);                     // IMPORTANT DELAY! (Minimum ~276ms)
   Serial1.print("$$$");         // Enter command mode
   delay(15);
   Serial1.print("CFI\n");                 
-  delay(15);
+  delay(100);
 }
 
-void BT_SendReport(uint8_t id, KeyReport *report){
-  if (id == 2){
-    Serial1.write((byte)0xFD); //Start HID Report 
-    Serial1.write((byte)0x9); //Length byte 
-    Serial1.write((byte)0x1); //Descriptor byte 
-    Serial1.write(report->modifiers); //Modifier byte 
-    Serial1.write((byte)0x00); //- 
-    for(byte i = 0;i<6;i++) 
-      Serial1.write((byte)(report->keys[i])); 
-    return;
-  }
-  if (id == 3){
+void BT_close(){
+  digitalWrite(4, LOW);
+  if (Serial1.available()) Serial1.end();
+}
+
+void BT_SendReport(KeyReport *report){
+  if (consumer_remap(report)){
     Serial1.write((byte)0xFD); //Start HID Report 
     Serial1.write((byte)0x3); //Length byte 
     Serial1.write((byte)0x3); //Descriptor byte 
     Serial1.write((byte)&report->modifiers); 
     Serial1.write((byte)0x0);
+  } else {
+    Serial1.write((byte)0xFD); //Start HID Report 
+    Serial1.write((byte)0x9); //Length byte 
+    Serial1.write((byte)0x1); //Descriptor byte 
+    Serial1.write(report->modifiers); //Modifier byte 
+    Serial1.write((byte)0x00); //- 
+    for(byte i = 0; i < 6; i++) Serial1.write((byte)(report->keys[i])); 
   }
 } 
 
 void setup() {
-  BT_init();
+  analogWrite(4, 0);
+  if (!is_usb) BT_init();
   setup_keymaps();
   setup_ps2();
   delay(100);
+}
+
+bool consumer_remap(KeyReport *report){
+  
+  return false;
 }
 
 void loop() {
@@ -197,7 +207,7 @@ void loop() {
           k2 = 72, skip = 7, brk = true;
           report_add(k2);
           if (is_usb) HID().SendReport(2,&report,sizeof(KeyReport));
-            else BT_SendReport(2, &report);
+            else BT_SendReport(&report);
         } else k2 = ext ? return_ke(k) : K[k];
 
         if (k2) {
@@ -212,7 +222,7 @@ void loop() {
             }
           } else report_add(k2);
           if (is_usb) HID().SendReport(2,&report,sizeof(KeyReport));
-            else BT_SendReport(2,&report);
+            else BT_SendReport(&report);
         }
 
         brk = false, ext = false;
