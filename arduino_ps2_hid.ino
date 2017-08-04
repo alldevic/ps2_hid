@@ -23,7 +23,7 @@
 #define BT_STOP_EJECT 0x4000  // Stop/Eject
 #define BT_BROWSER 0x8000     // AL Internet Browser
 
-static bool is_usb = false;
+static bool is_usb = true;
 static volatile uint8_t buffer[BUFFER_SIZE];
 static volatile uint8_t head, tail, sendBits, msg, bitCount, setBits;
 
@@ -168,7 +168,7 @@ void send_msg(uint8_t m) {
 }
 
 void BT_init(){
-  digitalWrite(4, HIGH);
+  analogWrite(4, 255);
   if (Serial1.available()) Serial1.end();
   Serial1.begin(115200);
   delay(320);                     // IMPORTANT DELAY! (Minimum ~276ms)
@@ -206,7 +206,7 @@ void BT_SendReport(KeyReport *report){
 } 
 
 void setup() {
-  digitalWrite(4, LOW);
+  analogWrite(4, 0);
   if (!is_usb) BT_init();
   setup_keymaps();
   setup_ps2();
@@ -250,4 +250,3 @@ void loop() {
     }
   }
 }
-
