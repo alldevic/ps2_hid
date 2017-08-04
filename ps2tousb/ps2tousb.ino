@@ -83,51 +83,51 @@ void pass(){
 static bool fn = false;
 
 void loop() {
-    ps2::UsbKeyboardLeds newLedState = (ps2::UsbKeyboardLeds)BootKeyboard.getLeds();
-    if (newLedState != ledValueLastSentToPs2) {
-        ps2Keyboard.sendLedStatus(keyMapping.translateLeds(newLedState));
-        ledValueLastSentToPs2 = newLedState;
-    }
+  ps2::UsbKeyboardLeds newLedState = (ps2::UsbKeyboardLeds)BootKeyboard.getLeds();
+  if (newLedState != ledValueLastSentToPs2) {
+    ps2Keyboard.sendLedStatus(keyMapping.translateLeds(newLedState));
+    ledValueLastSentToPs2 = newLedState;
+  }
 
-    ps2::KeyboardOutput scanCode = ps2Keyboard.readScanCode();
-    if (scanCode == ps2::KeyboardOutput::garbled) {}
-    else if (scanCode != ps2::KeyboardOutput::none) {
-        ps2::UsbKeyAction action = keyMapping.translatePs2Keycode(scanCode);
-        KeyboardKeycode hidCode = (KeyboardKeycode)action.hidCode;
-               
-        switch (action.gesture) {
-            case ps2::UsbKeyAction::KeyDown:
-              if (hidCode == KEY_RIGHT_ALT) fn = true;
-              if (fn){
-                if (hidCode == KEY_DOWN) 
-                  is_usb ? Consumer.write(MEDIA_PLAY_PAUSE) : BT_WriteConsumer(BT_PLAY);
-                if (hidCode == KEY_RIGHT) 
-                  is_usb ? Consumer.write(MEDIA_NEXT) : BT_WriteConsumer(BT_NEXT);
-                if (hidCode == KEY_LEFT) 
-                  is_usb ? Consumer.write(MEDIA_PREV) : BT_WriteConsumer(BT_PREV);
-                if (hidCode == KEY_UP) {
-                  is_usb ? Consumer.write(MEDIA_STOP) : BT_WriteConsumer(BT_STOP); //BT Android problem
-                  fn = false;
-                } 
-                if (hidCode == KEY_F10) {
-                  is_usb ? Consumer.write(MEDIA_VOL_MUTE) : BT_WriteConsumer(BT_MUTE);  
-                   fn = false;
-                }
-                if (hidCode == KEY_F11)
-                  is_usb ? Consumer.write(MEDIA_VOL_DOWN) : BT_WriteConsumer(BT_VOL_DOWN);  
-                if (hidCode == KEY_F12)
-                  is_usb ? Consumer.write(MEDIA_VOL_UP) : BT_WriteConsumer(BT_VOL_UP);
-                if (hidCode == KEY_F2) {
-                  is_usb ? BT_init() : BT_close();
-                  is_usb = !is_usb, fn = false;
-                }
-              } else BootKeyboard.press(hidCode);
-              break;
-            case ps2::UsbKeyAction::KeyUp:
-              if (hidCode == KEY_RIGHT_ALT) fn = false;
-                else BootKeyboard.release(hidCode);
-              break;
-        }
+  ps2::KeyboardOutput scanCode = ps2Keyboard.readScanCode();
+  if (scanCode == ps2::KeyboardOutput::garbled) {}
+  else if (scanCode != ps2::KeyboardOutput::none) {
+    ps2::UsbKeyAction action = keyMapping.translatePs2Keycode(scanCode);
+    KeyboardKeycode hidCode = (KeyboardKeycode)action.hidCode;
+
+    switch (action.gesture) {
+      case ps2::UsbKeyAction::KeyDown:
+        if (hidCode == KEY_RIGHT_ALT) fn = true;
+          if (fn){
+            if (hidCode == KEY_DOWN) 
+              is_usb ? Consumer.write(MEDIA_PLAY_PAUSE) : BT_WriteConsumer(BT_PLAY);
+            if (hidCode == KEY_RIGHT) 
+              is_usb ? Consumer.write(MEDIA_NEXT) : BT_WriteConsumer(BT_NEXT);
+            if (hidCode == KEY_LEFT) 
+              is_usb ? Consumer.write(MEDIA_PREV) : BT_WriteConsumer(BT_PREV);
+            if (hidCode == KEY_UP) {
+              is_usb ? Consumer.write(MEDIA_STOP) : BT_WriteConsumer(BT_STOP); //BT Android problem
+              fn = false;
+            } 
+            if (hidCode == KEY_F10) {
+              is_usb ? Consumer.write(MEDIA_VOL_MUTE) : BT_WriteConsumer(BT_MUTE);  
+              fn = false;
+            }
+            if (hidCode == KEY_F11)
+              is_usb ? Consumer.write(MEDIA_VOL_DOWN) : BT_WriteConsumer(BT_VOL_DOWN);  
+            if (hidCode == KEY_F12)
+              is_usb ? Consumer.write(MEDIA_VOL_UP) : BT_WriteConsumer(BT_VOL_UP);
+            if (hidCode == KEY_F2) {
+              is_usb ? BT_init() : BT_close();
+              is_usb = !is_usb, fn = false;
+            }
+          } else BootKeyboard.press(hidCode);
+        break;
+      case ps2::UsbKeyAction::KeyUp:
+        if (hidCode == KEY_RIGHT_ALT) fn = false;
+          else BootKeyboard.release(hidCode);
+        break;
     }
+  }
 }
 
