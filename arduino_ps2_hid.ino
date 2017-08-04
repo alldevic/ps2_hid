@@ -206,7 +206,7 @@ void BT_SendReport(KeyReport *report){
 } 
 
 void setup() {
-  analogWrite(4, 0);
+  digitalWrite(4, LOW);
   if (!is_usb) BT_init();
   setup_keymaps();
   setup_ps2();
