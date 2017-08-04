@@ -226,7 +226,7 @@ void loop() {
         if (k == 0xE1) {
           k2 = 72, skip = 7, brk = true;
           report_add(k2);
-          if (is_usb) HID().SendReport(2,&report,sizeof(KeyReport));
+          if (is_usb) Keyboard.sendReport(&report); //HID().SendReport(2,&report,sizeof(KeyReport));
             else BT_SendReport(&report);
         } else k2 = ext ? return_ke(k) : K[k];
 
@@ -241,7 +241,7 @@ void loop() {
               send_msg(0xED);
             }
           } else report_add(k2);
-          if (is_usb) HID().SendReport(2,&report,sizeof(KeyReport));
+          if (is_usb) Keyboard.sendReport(&report); //HID().SendReport(2,&report,sizeof(KeyReport));
             else BT_SendReport(&report);
         }
 
