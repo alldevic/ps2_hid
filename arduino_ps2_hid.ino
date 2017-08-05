@@ -17,44 +17,64 @@ static RN42<typeof(BT_OUT)> bt;
 
 void setup() {
   analogWrite(4, 0);
-  if (!is_usb) bt.init(BT_OUT);
+  if (is_usb == false) { 
+    bt.init(BT_OUT);
+  }
   ps2Keyboard.begin();
   BootKeyboard.begin();
 }
 
 static bool fn = false;
 
-void key_down(KeyboardKeycode hidCode){
-  if (hidCode == KEY_RIGHT_ALT) fn = true;
-    if (fn){
-      if (hidCode == KEY_DOWN) 
-        is_usb ? Consumer.write(MEDIA_PLAY_PAUSE) : bt.WriteConsumer(BT_OUT, RN_PLAY);
-      if (hidCode == KEY_RIGHT) 
-        is_usb ? Consumer.write(MEDIA_NEXT) : bt.WriteConsumer(BT_OUT, RN_NEXT);
-      if (hidCode == KEY_LEFT) 
-        is_usb ? Consumer.write(MEDIA_PREV) : bt.WriteConsumer(BT_OUT, RN_PREV);
-      if (hidCode == KEY_UP) {
-        is_usb ? Consumer.write(MEDIA_STOP) : bt.WriteConsumer(BT_OUT, RN_STOP); //BT Android problem
-        fn = false;
-      } 
-      if (hidCode == KEY_F10) {
-        is_usb ? Consumer.write(MEDIA_VOL_MUTE) : bt.WriteConsumer(BT_OUT, RN_MUTE);  
-        fn = false;
-      }
-      if (hidCode == KEY_F11)
-        is_usb ? Consumer.write(MEDIA_VOL_DOWN) : bt.WriteConsumer(BT_OUT, RN_VOL_DOWN);  
-      if (hidCode == KEY_F12)
-        is_usb ? Consumer.write(MEDIA_VOL_UP) : bt.WriteConsumer(BT_OUT, RN_VOL_UP);
-      if (hidCode == KEY_F2) {
-        is_usb ? bt.init(BT_OUT) : bt.close(BT_OUT);
-        is_usb = !is_usb, fn = false;
-      }
-  } else if (is_usb) BootKeyboard.press(hidCode); else report.add(hidCode);
+void key_down(KeyboardKeycode hidCode) {
+  if (hidCode == KEY_RIGHT_ALT){
+    fn = true;
+  } 
+  
+  if (fn) {
+    if (hidCode == KEY_DOWN) { 
+      is_usb ? Consumer.write(MEDIA_PLAY_PAUSE) : bt.WriteConsumer(BT_OUT, RN_PLAY);
+    }
+    if (hidCode == KEY_RIGHT) {
+      is_usb ? Consumer.write(MEDIA_NEXT) : bt.WriteConsumer(BT_OUT, RN_NEXT);
+    }
+    if (hidCode == KEY_LEFT) {
+      is_usb ? Consumer.write(MEDIA_PREV) : bt.WriteConsumer(BT_OUT, RN_PREV);
+    }
+    if (hidCode == KEY_UP) {
+      is_usb ? Consumer.write(MEDIA_STOP) : bt.WriteConsumer(BT_OUT, RN_STOP); //BT Android problem
+      fn = false;
+    } 
+    if (hidCode == KEY_F10) {
+      is_usb ? Consumer.write(MEDIA_VOL_MUTE) : bt.WriteConsumer(BT_OUT, RN_MUTE);  
+      fn = false;
+    }
+    if (hidCode == KEY_F11) {
+      is_usb ? Consumer.write(MEDIA_VOL_DOWN) : bt.WriteConsumer(BT_OUT, RN_VOL_DOWN);  
+    }
+    if (hidCode == KEY_F12) {
+      is_usb ? Consumer.write(MEDIA_VOL_UP) : bt.WriteConsumer(BT_OUT, RN_VOL_UP);
+    }
+    if (hidCode == KEY_F2) {
+      is_usb ? bt.init(BT_OUT) : bt.close(BT_OUT);
+      is_usb = not is_usb;
+      fn = false;
+    }
+  } else if (is_usb) {
+    BootKeyboard.press(hidCode);
+  } else {
+    report.add(hidCode);
+  }
 }
 
 void key_up(KeyboardKeycode hidCode){
-  if (hidCode == KEY_RIGHT_ALT) fn = false;
-    else if (is_usb) BootKeyboard.release(hidCode); else report.remove(hidCode);
+  if (hidCode == KEY_RIGHT_ALT) {
+    fn = false;
+  } else if (is_usb) {
+      BootKeyboard.release(hidCode);
+    } else {
+      report.remove(hidCode);
+    }
 }
 
 void loop() {
@@ -78,7 +98,9 @@ void loop() {
         key_up(hidCode);    
         break;
     }
-    if (!is_usb) bt.SendReport(BT_OUT, &report);
+    if (is_usb == false) {
+      bt.SendReport(BT_OUT, &report);
+    }
   }
 }
 

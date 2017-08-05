@@ -20,10 +20,9 @@ class KeyReport {
   }
 
   void remove(uint8_t k) {
-    uint8_t i;
     if (k >= 224) this->modifiers_ &= ~(1 << (k - 224));
     else {
-      for (i = 0; i < 6; ++i) {
+      for (uint8_t i = 0; i < 6; ++i) {
         if (this->keys_[i] == k) {
           this->keys_[i] = 0;
           break;
