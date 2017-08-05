@@ -60,6 +60,18 @@ void BT_WriteConsumer(byte low, byte high){
   return;
 }
 
+ps2::UsbKeyboardLeds BT_getLeds(){
+  
+}
+
+void BT_press(uint8_t key){
+  
+}
+
+void BT_release(uint8_t key){
+  
+}
+
 //void BT_SendReport(KeyReport *report){
 //  Serial1.write((byte)0xFD); //Start HID Report 
 //  Serial1.write((byte)0x9); //Length byte 
@@ -76,18 +88,14 @@ void setup() {
   BootKeyboard.begin();
 }
 
-void pass(){
-  return;
-}
-
 static bool fn = false;
 
 void loop() {
-  ps2::UsbKeyboardLeds newLedState = (ps2::UsbKeyboardLeds)BootKeyboard.getLeds();
+  ps2::UsbKeyboardLeds newLedState = is_usb ? (ps2::UsbKeyboardLeds)BootKeyboard.getLeds() : BT_getLeds();
   if (newLedState != ledValueLastSentToPs2) {
     ps2Keyboard.sendLedStatus(keyMapping.translateLeds(newLedState));
     ledValueLastSentToPs2 = newLedState;
-  }
+  }   
 
   ps2::KeyboardOutput scanCode = ps2Keyboard.readScanCode();
   if (scanCode == ps2::KeyboardOutput::garbled) {}
@@ -121,11 +129,13 @@ void loop() {
               is_usb ? BT_init() : BT_close();
               is_usb = !is_usb, fn = false;
             }
-          } else BootKeyboard.press(hidCode);
+          } else if (is_usb) BootKeyboard.press(hidCode);
+            else BT_press(hidCode);
         break;
       case ps2::UsbKeyAction::KeyUp:
         if (hidCode == KEY_RIGHT_ALT) fn = false;
-          else BootKeyboard.release(hidCode);
+          else if (is_usb) BootKeyboard.release(hidCode);
+            else BT_release(hidCode);
         break;
     }
   }
