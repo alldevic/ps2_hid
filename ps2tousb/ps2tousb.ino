@@ -2,116 +2,60 @@
 #include "ps2_NullDiagnostics.h"
 #include "ps2_UsbTranslator.h"
 #include "HID-Project.h"
+#include "rn42.h"
+#include "KeyReport.h"
 
-// RN-42 consumer codes
-#define BT_RELEASE 0x0, 0x0        // Release consumer key
-#define BT_HOME 0x1, 0x00          // AC Home
-#define BT_EMAIL 0x2, 0x00         // AC Email Reader
-#define BT_SEARCH 0x4, 0x00        // AC Search
-#define BT_KEYBLAY 0x8, 0x00       // AL Keyboard Layout (Virtual Apple Keyboard Toggle)
-#define BT_VOL_UP 0x10, 0x00       // Volume Up
-#define BT_VOL_DOWN 0x20, 0x00     // Volume Down
-#define BT_MUTE 0x40, 0x00         // Mute
-#define BT_PLAY 0x80, 0x00         // Play/Pause
-#define BT_NEXT 0x00, 0x01         // Scan Next Track
-#define BT_PREV 0x00, 0x02         // Scan Previous Track
-#define BT_STOP 0x00, 0x04         // Stop
-#define BT_EJECT 0x00, 0x08        // Eject
-#define BT_FORWARD 0x00, 0x10      // Fast Forward
-#define BT_REWIND 0x00, 0x20       // Rewind
-#define BT_STOP_EJECT 0x00, 0x40   // Stop/Eject
-#define BT_BROWSER 0x00, 0x80      // AL Internet Browse
-
-typedef struct
-{
-  uint8_t modifiers;
-  uint8_t reserved;
-  uint8_t keys[6];
-} KeyReport;
+#define BT_OUT Serial1
 
 static bool is_usb = true;
 static ps2::NullDiagnostics diagnostics;
 static ps2::UsbTranslator<ps2::NullDiagnostics> keyMapping(diagnostics);
 static ps2::Keyboard<2,3,16, ps2::NullDiagnostics> ps2Keyboard(diagnostics);
 static ps2::UsbKeyboardLeds ledValueLastSentToPs2 = ps2::UsbKeyboardLeds::none;
-KeyReport report;
-
-void BT_init(){
-  analogWrite(4, 255);
-  if (Serial1.available()) Serial1.end();
-  delay(100);
-  Serial1.begin(115200);
-  delay(320);                     // IMPORTANT DELAY! (Minimum ~276ms)
-  //Serial1.print("$$$");         // Enter command mode
-  //delay(15);
-  //Serial1.print("CFR\n");                 
-  //delay(100);
-}
-
-void BT_close(){
-  digitalWrite(4, LOW);
-  if (Serial1.available()) Serial1.end();
-}
-
-void BT_WriteConsumer(byte low, byte high){
-  Serial1.write((byte)0xFD); //Start HID Report 
-  Serial1.write((byte)0x3); //Length byte 
-  Serial1.write((byte)0x3); //Descriptor byte 
-  Serial1.write(low); 
-  Serial1.write(high);
-  delay(15);
-  Serial1.write((byte)0xFD); //Start HID Report 
-  Serial1.write((byte)0x3); //Length byte 
-  Serial1.write((byte)0x3); //Descriptor byte 
-  Serial1.write((byte)0x00); 
-  Serial1.write((byte)0x00);
-  return;
-}
-
-void BT_SendReport(KeyReport *report){
-  Serial1.write((byte)0xFD); //Start HID Report 
-  Serial1.write((byte)0x9); //Length byte 
-  Serial1.write((byte)0x1); //Descriptor byte 
-  Serial1.write(report->modifiers); //Modifier byte 
-  Serial1.write((byte)0x00); //- 
-  for(byte i = 0; i < 6; i++) Serial1.write((byte)(report->keys[i])); 
-}
-
-void report_add(uint8_t k) {
-  uint8_t i;
-  if (k >= 224) report.modifiers |= 1 << (k - 224);
-  else if (report.keys[0] != k && report.keys[1] != k &&
-           report.keys[2] != k && report.keys[3] != k &&
-           report.keys[4] != k && report.keys[5] != k) {
-    for (i = 0; i < 6; ++i)
-      if (report.keys[i] == 0) {
-        report.keys[i] = k;
-        break;
-      }
-  }
-}
-
-void report_remove(uint8_t k) {
-  uint8_t i;
-  if (k >= 224) report.modifiers &= ~(1 << (k - 224));
-  else {
-    for (i = 0; i < 6; ++i) {
-      if (report.keys[i] == k) {
-        report.keys[i] = 0;
-        break;
-      }
-    }
-  }
-}
+static KeyReport report;
+static RN42<typeof(BT_OUT)> bt;
 
 void setup() {
   analogWrite(4, 0);
-  if (!is_usb) BT_init();
+  if (!is_usb) bt.init(BT_OUT);
   ps2Keyboard.begin();
   BootKeyboard.begin();
 }
 
 static bool fn = false;
+
+void key_down(KeyboardKeycode hidCode){
+  if (hidCode == KEY_RIGHT_ALT) fn = true;
+    if (fn){
+      if (hidCode == KEY_DOWN) 
+        is_usb ? Consumer.write(MEDIA_PLAY_PAUSE) : bt.WriteConsumer(BT_OUT, RN_PLAY);
+      if (hidCode == KEY_RIGHT) 
+        is_usb ? Consumer.write(MEDIA_NEXT) : bt.WriteConsumer(BT_OUT, RN_NEXT);
+      if (hidCode == KEY_LEFT) 
+        is_usb ? Consumer.write(MEDIA_PREV) : bt.WriteConsumer(BT_OUT, RN_PREV);
+      if (hidCode == KEY_UP) {
+        is_usb ? Consumer.write(MEDIA_STOP) : bt.WriteConsumer(BT_OUT, RN_STOP); //BT Android problem
+        fn = false;
+      } 
+      if (hidCode == KEY_F10) {
+        is_usb ? Consumer.write(MEDIA_VOL_MUTE) : bt.WriteConsumer(BT_OUT, RN_MUTE);  
+        fn = false;
+      }
+      if (hidCode == KEY_F11)
+        is_usb ? Consumer.write(MEDIA_VOL_DOWN) : bt.WriteConsumer(BT_OUT, RN_VOL_DOWN);  
+      if (hidCode == KEY_F12)
+        is_usb ? Consumer.write(MEDIA_VOL_UP) : bt.WriteConsumer(BT_OUT, RN_VOL_UP);
+      if (hidCode == KEY_F2) {
+        is_usb ? bt.init(BT_OUT) : bt.close(BT_OUT);
+        is_usb = !is_usb, fn = false;
+      }
+  } else if (is_usb) BootKeyboard.press(hidCode); else report.add(hidCode);
+}
+
+void key_up(KeyboardKeycode hidCode){
+  if (hidCode == KEY_RIGHT_ALT) fn = false;
+    else if (is_usb) BootKeyboard.release(hidCode); else report.remove(hidCode);
+}
 
 void loop() {
   ps2::UsbKeyboardLeds newLedState = (ps2::UsbKeyboardLeds)BootKeyboard.getLeds();
@@ -128,38 +72,13 @@ void loop() {
     
     switch (action.gesture) {
       case ps2::UsbKeyAction::KeyDown:
-        if (hidCode == KEY_RIGHT_ALT) fn = true;
-          if (fn){
-            if (hidCode == KEY_DOWN) 
-              is_usb ? Consumer.write(MEDIA_PLAY_PAUSE) : BT_WriteConsumer(BT_PLAY);
-            if (hidCode == KEY_RIGHT) 
-              is_usb ? Consumer.write(MEDIA_NEXT) : BT_WriteConsumer(BT_NEXT);
-            if (hidCode == KEY_LEFT) 
-              is_usb ? Consumer.write(MEDIA_PREV) : BT_WriteConsumer(BT_PREV);
-            if (hidCode == KEY_UP) {
-              is_usb ? Consumer.write(MEDIA_STOP) : BT_WriteConsumer(BT_STOP); //BT Android problem
-              fn = false;
-            } 
-            if (hidCode == KEY_F10) {
-              is_usb ? Consumer.write(MEDIA_VOL_MUTE) : BT_WriteConsumer(BT_MUTE);  
-              fn = false;
-            }
-            if (hidCode == KEY_F11)
-              is_usb ? Consumer.write(MEDIA_VOL_DOWN) : BT_WriteConsumer(BT_VOL_DOWN);  
-            if (hidCode == KEY_F12)
-              is_usb ? Consumer.write(MEDIA_VOL_UP) : BT_WriteConsumer(BT_VOL_UP);
-            if (hidCode == KEY_F2) {
-              is_usb ? BT_init() : BT_close();
-              is_usb = !is_usb, fn = false;
-            }
-          } else if (is_usb) BootKeyboard.press(hidCode); else report_add(hidCode);
+        key_down(hidCode);
         break;
       case ps2::UsbKeyAction::KeyUp:
-        if (hidCode == KEY_RIGHT_ALT) fn = false;
-          else if (is_usb) BootKeyboard.release(hidCode); else report_remove(hidCode);
+        key_up(hidCode);    
         break;
     }
-    if (!is_usb) BT_SendReport(&report);
+    if (!is_usb) bt.SendReport(BT_OUT, &report);
   }
 }
 
