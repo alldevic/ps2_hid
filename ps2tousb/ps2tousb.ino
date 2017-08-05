@@ -22,11 +22,19 @@
 #define BT_STOP_EJECT 0x00, 0x40   // Stop/Eject
 #define BT_BROWSER 0x00, 0x80      // AL Internet Browse
 
+typedef struct
+{
+  uint8_t modifiers;
+  uint8_t reserved;
+  uint8_t keys[6];
+} KeyReport;
+
 static bool is_usb = true;
 static ps2::NullDiagnostics diagnostics;
 static ps2::UsbTranslator<ps2::NullDiagnostics> keyMapping(diagnostics);
 static ps2::Keyboard<2,3,16, ps2::NullDiagnostics> ps2Keyboard(diagnostics);
 static ps2::UsbKeyboardLeds ledValueLastSentToPs2 = ps2::UsbKeyboardLeds::none;
+KeyReport report;
 
 void BT_init(){
   analogWrite(4, 255);
@@ -60,27 +68,42 @@ void BT_WriteConsumer(byte low, byte high){
   return;
 }
 
-ps2::UsbKeyboardLeds BT_getLeds(){
-  
+void BT_SendReport(KeyReport *report){
+  Serial1.write((byte)0xFD); //Start HID Report 
+  Serial1.write((byte)0x9); //Length byte 
+  Serial1.write((byte)0x1); //Descriptor byte 
+  Serial1.write(report->modifiers); //Modifier byte 
+  Serial1.write((byte)0x00); //- 
+  for(byte i = 0; i < 6; i++) Serial1.write((byte)(report->keys[i])); 
 }
 
-void BT_press(uint8_t key){
-  
+void report_add(uint8_t k) {
+  uint8_t i;
+  if (k >= 224) report.modifiers |= 1 << (k - 224);
+  else if (report.keys[0] != k && report.keys[1] != k &&
+           report.keys[2] != k && report.keys[3] != k &&
+           report.keys[4] != k && report.keys[5] != k) {
+    for (i = 0; i < 6; ++i)
+      if (report.keys[i] == 0) {
+        report.keys[i] = k;
+        break;
+      }
+  }
 }
 
-void BT_release(uint8_t key){
-  
+void report_remove(uint8_t k) {
+  uint8_t i;
+  if (k >= 224) report.modifiers &= ~(1 << (k - 224));
+  else {
+    for (i = 0; i < 6; ++i) {
+      if (report.keys[i] == k) {
+        report.keys[i] = 0;
+        break;
+      }
+    }
+  }
 }
 
-//void BT_SendReport(KeyReport *report){
-//  Serial1.write((byte)0xFD); //Start HID Report 
-//  Serial1.write((byte)0x9); //Length byte 
-//  Serial1.write((byte)0x1); //Descriptor byte 
-//  Serial1.write(report->modifiers); //Modifier byte 
-//  Serial1.write((byte)0x00); //- 
-//  for(byte i = 0; i < 6; i++) Serial1.write((byte)(report->keys[i])); 
-//}
- 
 void setup() {
   analogWrite(4, 0);
   if (!is_usb) BT_init();
@@ -91,7 +114,7 @@ void setup() {
 static bool fn = false;
 
 void loop() {
-  ps2::UsbKeyboardLeds newLedState = is_usb ? (ps2::UsbKeyboardLeds)BootKeyboard.getLeds() : BT_getLeds();
+  ps2::UsbKeyboardLeds newLedState = (ps2::UsbKeyboardLeds)BootKeyboard.getLeds();
   if (newLedState != ledValueLastSentToPs2) {
     ps2Keyboard.sendLedStatus(keyMapping.translateLeds(newLedState));
     ledValueLastSentToPs2 = newLedState;
@@ -102,7 +125,7 @@ void loop() {
   else if (scanCode != ps2::KeyboardOutput::none) {
     ps2::UsbKeyAction action = keyMapping.translatePs2Keycode(scanCode);
     KeyboardKeycode hidCode = (KeyboardKeycode)action.hidCode;
-
+    
     switch (action.gesture) {
       case ps2::UsbKeyAction::KeyDown:
         if (hidCode == KEY_RIGHT_ALT) fn = true;
@@ -129,15 +152,14 @@ void loop() {
               is_usb ? BT_init() : BT_close();
               is_usb = !is_usb, fn = false;
             }
-          } else if (is_usb) BootKeyboard.press(hidCode);
-            else BT_press(hidCode);
+          } else if (is_usb) BootKeyboard.press(hidCode); else report_add(hidCode);
         break;
       case ps2::UsbKeyAction::KeyUp:
         if (hidCode == KEY_RIGHT_ALT) fn = false;
-          else if (is_usb) BootKeyboard.release(hidCode);
-            else BT_release(hidCode);
+          else if (is_usb) BootKeyboard.release(hidCode); else report_remove(hidCode);
         break;
     }
+    if (!is_usb) BT_SendReport(&report);
   }
 }
 
