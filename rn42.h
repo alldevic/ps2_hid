@@ -26,8 +26,8 @@
 template <typename T>
 class RN42{
  	public:
-  void init(T &out) {
-  	analogWrite(4, 255);
+  void init(T &out, uint8_t state_pin) {
+  	analogWrite(state_pin, 255);
   	if (out.available()) out.end();
   	delay(100);
   	out.begin(115200);
@@ -38,8 +38,8 @@ class RN42{
   	//delay(100);
 	}
 
-  void close(T &out) {
-  	digitalWrite(4, LOW);
+  void close(T &out, uint8_t state_pin) {
+  	digitalWrite(state_pin, LOW);
   	if (out.available()) out.end();
 	}
  

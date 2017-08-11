@@ -6,19 +6,24 @@
 #include "KeyReport.h"
 
 #define BT_OUT Serial1
+#define BT_STATE_PIN 4
+#define PS2_DATA_PIN 2
+#define PS2_CLK_PIN 3
+#define PS2_BUF_SIZE 16
 
 static bool is_usb = true;
 static ps2::NullDiagnostics diagnostics;
 static ps2::UsbTranslator<ps2::NullDiagnostics> keyMapping(diagnostics);
-static ps2::Keyboard<2,3,16, ps2::NullDiagnostics> ps2Keyboard(diagnostics);
+static ps2::Keyboard<PS2_DATA_PIN, PS2_CLK_PIN, PS2_BUF_SIZE, ps2::NullDiagnostics> ps2Keyboard(diagnostics);
 static ps2::UsbKeyboardLeds ledValueLastSentToPs2 = ps2::UsbKeyboardLeds::none;
 static KeyReport report;
 static RN42<typeof(BT_OUT)> bt;
 
 void setup() {
-  analogWrite(4, 0);
-  if (is_usb == false) { 
-    bt.init(BT_OUT);
+  if (is_usb) {
+    analogWrite(BT_STATE_PIN, 0);
+  } else { 
+    bt.init(BT_OUT, BT_STATE_PIN);
   }
   ps2Keyboard.begin();
   BootKeyboard.begin();
@@ -56,7 +61,7 @@ void key_down(KeyboardKeycode hidCode) {
       is_usb ? Consumer.write(MEDIA_VOL_UP) : bt.WriteConsumer(BT_OUT, RN_VOL_UP);
     }
     if (hidCode == KEY_F2) {
-      is_usb ? bt.init(BT_OUT) : bt.close(BT_OUT);
+      is_usb ? bt.init(BT_OUT, BT_STATE_PIN) : bt.close(BT_OUT, BT_STATE_PIN);
       is_usb = not is_usb;
       fn = false;
     }
