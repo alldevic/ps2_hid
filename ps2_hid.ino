@@ -77,15 +77,23 @@ void key_up(KeyboardKeycode hidCode){
     }
 }
 
-void loop() {
+void update_leds(){
   ps2::UsbKeyboardLeds newLedState = (ps2::UsbKeyboardLeds)BootKeyboard.getLeds();
+  if (is_usb == false){
+    newLedState = (ps2::UsbKeyboardLeds)bt.getLeds(Serial1, BootKeyboard.getLeds());
+  }
+  
   if (newLedState != ledValueLastSentToPs2) {
     ps2Keyboard.sendLedStatus(keyMapping.translateLeds(newLedState));
     ledValueLastSentToPs2 = newLedState;
-  }   
+  }
+}
+
+void loop() {
+  update_leds();
 
   ps2::KeyboardOutput scanCode = ps2Keyboard.readScanCode();
-  if (scanCode == ps2::KeyboardOutput::garbled) {}
+  if (scanCode == ps2::KeyboardOutput::garbled) {keyMapping.reset();}
   else if (scanCode != ps2::KeyboardOutput::none) {
     ps2::UsbKeyAction action = keyMapping.translatePs2Keycode(scanCode);
     KeyboardKeycode hidCode = (KeyboardKeycode)action.hidCode;

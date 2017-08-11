@@ -58,6 +58,15 @@ class RN42{
   	return;
 	}
 
+ uint8_t getLeds(T &out, uint8_t old_state){
+  uint8_t new_state;
+  new_state = out.read();
+  if (new_state == 0xFF){
+    new_state = out.read();
+  }
+  return old_state;
+ }
+
   void SendReport(T &out, KeyReport *report) {
   	out.write((byte)0xFD); //Start HID Report 
   	out.write((byte)0x9); //Length byte 
